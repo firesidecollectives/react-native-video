@@ -169,6 +169,15 @@ static int const RCTVideoUnset = -1;
 - (CMTime)playerItemDuration
 {
   AVPlayerItem *playerItem = [_player currentItem];
+    NSMutableArray *metadatas = [[NSMutableArray alloc] init];
+    AVMutableMetadataItem *item = [AVMutableMetadataItem metadataItem];
+    
+    item.identifier = AVMetadataCommonIdentifierTitle;
+    item.value = @"test title";
+    item.extendedLanguageTag = @"und";
+    [metadatas addObject:item];
+    playerItem.externalMetadata = metadatas;
+    
   if (playerItem.status == AVPlayerItemStatusReadyToPlay)
   {
     return([playerItem duration]);
