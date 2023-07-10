@@ -9,6 +9,7 @@
 #include <MediaPlayer/MPMediaItem.h>
 #include <MediaPlayer/MPRemoteCommand.h>
 #include <MediaPlayer/MPRemoteCommandCenter.h>
+#import <math.h>
 
 static NSString *const statusKeyPath = @"status";
 static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp";
@@ -483,6 +484,31 @@ static int const RCTVideoUnset = -1;
     return MPRemoteCommandHandlerStatusCommandFailed;
 }
 
+
+-(MPRemoteCommandHandlerStatus)skipForwardFromRemote:(MPRemoteCommandEvent *)event {
+    NSLog(@"RCTVideo skipForwardFromRemote currentTime");
+    CMTimeShow(_player.currentTime);
+    
+    /*if (_player.rate == 1.0) {
+        [self setPaused:true];
+        return MPRemoteCommandHandlerStatusSuccess;
+    }*/
+    
+    return MPRemoteCommandHandlerStatusCommandFailed;
+}
+
+-(MPRemoteCommandHandlerStatus)skipBackwardFromRemote:(MPRemoteCommandEvent *)event {
+    NSLog(@"RCTVideo skipBackwardFromRemote currentTime");
+    CMTimeShow(_player.currentTime);
+
+    Float64 newTime = fmax(CMTimeGetSeconds(_player.currentTime) - 15, 0);
+    [self setCurrentTime:newTime];
+    return MPRemoteCommandHandlerStatusSuccess;
+    
+}
+
+
+
 -(void)setupRemoteTransportControl {
     NSLog(@"RCTVideo setupRemoteTransportControl");
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
@@ -490,6 +516,8 @@ static int const RCTVideoUnset = -1;
     [[commandCenter pauseCommand] addTarget:self action:@selector(pauseFromRemote:)];
     [[commandCenter togglePlayPauseCommand] addTarget:self action:@selector(playFromRemote:)];
     [[commandCenter stopCommand] addTarget:self action:@selector(stopFromRemote:)];
+    [[commandCenter skipBackwardCommand] addTarget:self action:@selector(skipBackwardFromRemote:)];
+    [[commandCenter skipForwardCommand] addTarget:self action:@selector(skipForwardFromRemote:)];
 }
 
 -(void)cleanupRemoteTransportControl {
@@ -499,6 +527,8 @@ static int const RCTVideoUnset = -1;
     [[commandCenter pauseCommand] removeTarget:nil];
     [[commandCenter togglePlayPauseCommand] removeTarget:nil];
     [[commandCenter stopCommand] removeTarget:nil];
+    [[commandCenter skipBackwardCommand] removeTarget:nil];
+    [[commandCenter skipForwardCommand] removeTarget:nil];
 }
 
 -(void)cleanupNowPlaying {
