@@ -560,8 +560,13 @@ static int const RCTVideoUnset = -1;
     [[commandCenter pauseCommand] addTarget:self action:@selector(pauseFromRemote:)];
     [[commandCenter togglePlayPauseCommand] addTarget:self action:@selector(playFromRemote:)];
     [[commandCenter stopCommand] addTarget:self action:@selector(stopFromRemote:)];
-    [[commandCenter skipBackwardCommand] addTarget:self action:@selector(skipBackwardFromRemote:)];
-    [[commandCenter skipForwardCommand] addTarget:self action:@selector(skipForwardFromRemote:)];
+    
+    //only adds skip controls if handlers present.
+    if(self.onRemoteTriggeredSkipForward && self.onRemoteTriggeredSkipBack) {
+        [[commandCenter skipBackwardCommand] addTarget:self action:@selector(skipBackwardFromRemote:)];
+        [[commandCenter skipForwardCommand] addTarget:self action:@selector(skipForwardFromRemote:)];
+    }
+   
     _hasSetupRemoteTransportControl = YES;
 }
 
