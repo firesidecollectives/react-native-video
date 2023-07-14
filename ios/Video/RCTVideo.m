@@ -83,7 +83,10 @@ static int const RCTVideoUnset = -1;
   NSString * _title;
   NSString * _artist;
   NSString * _artworkUrl;
+  BOOL _activeForNowPlaying;
   NSString * _loadedArtworkUrl;
+  BOOL _hasSetupRemoteTransportControl;
+  BOOL _remoteControlInputLocked;
   NSString * _mixWithOthers;
   NSString * _resizeMode;
   BOOL _fullscreen;
@@ -131,8 +134,11 @@ static int const RCTVideoUnset = -1;
     _title = @"Fireside";
     _artist = nil;
     _artworkUrl = nil;
+    _activeForNowPlaying = NO;
     _loadedArtworkUrl = nil;
+    _hasSetupRemoteTransportControl = NO;
     _mixWithOthers = @"inherit"; // inherit, mix, duck
+    _remoteControlInputLocked = NO;
 #if TARGET_OS_IOS
     _restoreUserInterfaceForPIPStopCompletionHandler = NULL;
 #endif
@@ -437,7 +443,25 @@ static int const RCTVideoUnset = -1;
   _videoLoadStarted = YES;
 }
 
+
+-(void)applyRemoteInputLockTimeout {
+    NSLog(@"~~ remoteControl input locked");
+    _remoteControlInputLocked = YES;
+    
+    //after 1.5 second unlock remote control input
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NSLog(@"~~ remoteControl input unlocked");
+        _remoteControlInputLocked = NO;
+    });
+}
+
 -(MPRemoteCommandHandlerStatus)toggleFromRemote:(MPRemoteCommandEvent *)event {
+    if(_remoteControlInputLocked) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
+    [self applyRemoteInputLockTimeout];
+    
     NSLog(@"RCTVideo toggleFromRemote rate:%f", _player.rate);
     
     if (_player.rate == 0.0) {
@@ -452,17 +476,28 @@ static int const RCTVideoUnset = -1;
 }
 
 -(MPRemoteCommandHandlerStatus)playFromRemote:(MPRemoteCommandEvent *)event {
+    if(_remoteControlInputLocked) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
+    [self applyRemoteInputLockTimeout];
+    
     NSLog(@"RCTVideo playFromRemote rate:%f", _player.rate);
     
     if (_player.rate == 0.0) {
         [self setPaused:false];
         return MPRemoteCommandHandlerStatusSuccess;
     }
-    
     return MPRemoteCommandHandlerStatusCommandFailed;
 }
 
 -(MPRemoteCommandHandlerStatus)pauseFromRemote:(MPRemoteCommandEvent *)event {
+    if(_remoteControlInputLocked) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
+    [self applyRemoteInputLockTimeout];
+    
     NSLog(@"RCTVideo pauseFromRemote rate:%f", _player.rate);
     
     if (_player.rate == 1.0) {
@@ -474,10 +509,17 @@ static int const RCTVideoUnset = -1;
 }
 
 -(MPRemoteCommandHandlerStatus)stopFromRemote:(MPRemoteCommandEvent *)event {
+    if(_remoteControlInputLocked) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
+    [self applyRemoteInputLockTimeout];
+    
     NSLog(@"RCTVideo stopFromRemote rate:%f", _player.rate);
     
     if (_player.rate == 1.0) {
         [self setPaused:true];
+
         return MPRemoteCommandHandlerStatusSuccess;
     }
     
@@ -486,30 +528,40 @@ static int const RCTVideoUnset = -1;
 
 
 -(MPRemoteCommandHandlerStatus)skipForwardFromRemote:(MPRemoteCommandEvent *)event {
-    NSLog(@"RCTVideo skipForwardFromRemote currentTime");
-    CMTimeShow(_player.currentTime);
+    if(_remoteControlInputLocked) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
     
-    /*if (_player.rate == 1.0) {
-        [self setPaused:true];
-        return MPRemoteCommandHandlerStatusSuccess;
-    }*/
-    
-    return MPRemoteCommandHandlerStatusCommandFailed;
+    [self applyRemoteInputLockTimeout];
+    [self setPaused:false];
+    NSLog(@"RCTVideo skipForwardFromRemote");
+    if(self.onSkipForward) {
+        NSLog(@"RCTVideo did skipForwardFromRemote");
+        self.onSkipForward((@{@"target": self.reactTag}));
+    }
+    return MPRemoteCommandHandlerStatusSuccess;
 }
 
 -(MPRemoteCommandHandlerStatus)skipBackwardFromRemote:(MPRemoteCommandEvent *)event {
-    NSLog(@"RCTVideo skipBackwardFromRemote currentTime");
-    CMTimeShow(_player.currentTime);
-
-    Float64 newTime = fmax(CMTimeGetSeconds(_player.currentTime) - 15, 0);
-    [self setCurrentTime:newTime];
-    return MPRemoteCommandHandlerStatusSuccess;
+    if(_remoteControlInputLocked) {
+        NSLog(@"~~skipBackwardFromRemote locked");
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
     
+    [self applyRemoteInputLockTimeout];
+    [self setPaused:true];
+    NSLog(@"RCTVideo skipBackwardFromRemote");
+    if(self.onSkipBack) {
+        NSLog(@"RCTVideo did skipBackwardFromRemote");
+        self.onSkipBack((@{@"target": self.reactTag}));
+    }
+    return MPRemoteCommandHandlerStatusSuccess;
 }
 
-
-
 -(void)setupRemoteTransportControl {
+    if(_hasSetupRemoteTransportControl) {
+        return;
+    }
     NSLog(@"RCTVideo setupRemoteTransportControl");
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
     [[commandCenter playCommand] addTarget:self action:@selector(playFromRemote:)];
@@ -518,9 +570,13 @@ static int const RCTVideoUnset = -1;
     [[commandCenter stopCommand] addTarget:self action:@selector(stopFromRemote:)];
     [[commandCenter skipBackwardCommand] addTarget:self action:@selector(skipBackwardFromRemote:)];
     [[commandCenter skipForwardCommand] addTarget:self action:@selector(skipForwardFromRemote:)];
+    _hasSetupRemoteTransportControl = YES;
 }
 
 -(void)cleanupRemoteTransportControl {
+    if(!_hasSetupRemoteTransportControl) {
+        return;
+    }
     NSLog(@"RCTVideo cleanupRemoteTransportControl, _playInBackground:%d", _playInBackground);
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
     [[commandCenter playCommand] removeTarget:nil];
@@ -529,9 +585,13 @@ static int const RCTVideoUnset = -1;
     [[commandCenter stopCommand] removeTarget:nil];
     [[commandCenter skipBackwardCommand] removeTarget:nil];
     [[commandCenter skipForwardCommand] removeTarget:nil];
+    _hasSetupRemoteTransportControl = NO;
 }
 
 -(void)cleanupNowPlaying {
+    if(!_activeForNowPlaying) {
+        return;
+    }
     NSLog(@"RCTVideo cleanupNowPlaying, _playInBackground:%d", _playInBackground);
     MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
     NSMutableDictionary *songInfo = [[NSMutableDictionary alloc] init];
@@ -542,16 +602,23 @@ static int const RCTVideoUnset = -1;
     NSLog(@"RCTVideo setupNowPlaying, _playInBackground:%d", _playInBackground);
     MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
     
-    NSMutableDictionary *songInfo = [[NSMutableDictionary alloc] init];
+    //get existing song info dictionary or create new one
+    NSMutableDictionary *songInfo = (playingInfoCenter.nowPlayingInfo != nil) ? [[NSMutableDictionary alloc] initWithDictionary: playingInfoCenter.nowPlayingInfo] : [NSMutableDictionary dictionary];
 
     [songInfo setObject:_title forKey:MPMediaItemPropertyTitle];
     if(_artist) {
         [songInfo setObject:_artist forKey:MPMediaItemPropertyArtist];
     }
     
-    [songInfo setObject:[NSNumber numberWithDouble:_playerItem.currentTime.value] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
-    [songInfo setObject:[NSNumber numberWithDouble:_playerItem.duration.value] forKey:MPMediaItemPropertyPlaybackDuration];
-    [songInfo setObject:[NSNumber numberWithDouble:(_player.rate ? 0.0f : 1.0f)] forKey:MPNowPlayingInfoPropertyPlaybackRate];
+    double playerRate = (double) _player.rate;
+    double playerCurTime = (double) CMTimeGetSeconds(_playerItem.currentTime);
+    double playerDuration = (double) CMTimeGetSeconds(_playerItem.duration);
+    
+    NSLog(@"~~setupNowPlaying, playerRate:%f floatRate:%f currentTime:%lld duration:%lld curTimeSeconds:%f playerDurationSeconds:%f", playerRate, _player.rate, _playerItem.currentTime.value, _playerItem.duration.value, playerCurTime, playerDuration);
+    
+    [songInfo setObject:[NSNumber numberWithDouble:playerCurTime] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+    [songInfo setObject:[NSNumber numberWithDouble:playerDuration] forKey:MPMediaItemPropertyPlaybackDuration];
+    [songInfo setObject:[NSNumber numberWithDouble:playerRate] forKey:MPNowPlayingInfoPropertyPlaybackRate];
     [playingInfoCenter setNowPlayingInfo:songInfo];
     
     //will load in image from url and assign image to default MPNowPlayingInfoCenter
@@ -1084,6 +1151,10 @@ static int const RCTVideoUnset = -1;
     _artworkUrl = artworkUrl;
 }
 
+- (void)setActiveForNowPlaying:(BOOL)activeForNowPlaying {
+    _activeForNowPlaying = activeForNowPlaying;
+}
+
 //updates existing nowPlaying info with image loaded from artworkUrl
 -(void)updateExistingNowPlayingDataArtwork:(NSString *)artworkUrl {
     if( artworkUrl == nil ) {
@@ -1181,9 +1252,7 @@ static int const RCTVideoUnset = -1;
       [_player setRate:_rate];
     }
       
-    [_player setRate:_rate];
-      
-    if (_playInBackground) {
+    if (_activeForNowPlaying) {
         [self setupNowPlaying];
         [self setupRemoteTransportControl];
     }

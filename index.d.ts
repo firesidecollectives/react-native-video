@@ -192,6 +192,7 @@ export interface VideoProperties extends ViewProps {
     artist?: string | undefined;
     artworkUrl?: string | undefined;
     title?: string | undefined;
+    activeForNowPlaying?: boolean | undefined;
 
     onLoadStart?(): void;
     onLoad?(data: OnLoadData): void;
@@ -209,6 +210,8 @@ export interface VideoProperties extends ViewProps {
     onPlaybackStalled?(): void;
     onPlaybackResume?(): void;
     onPlaybackRateChange?(data: OnPlaybackRateData): void;
+    onSkipBack?() : void;
+    onSkipForward?() : void;
     onAudioFocusChanged?(): void;
     onAudioBecomingNoisy?(): void;
     onPictureInPictureStatusChanged?(data: OnPictureInPictureStatusData): void;

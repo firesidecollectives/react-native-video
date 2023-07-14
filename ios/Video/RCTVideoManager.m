@@ -41,6 +41,7 @@ RCT_EXPORT_VIEW_PROPERTY(ignoreSilentSwitch, NSString);
 RCT_EXPORT_VIEW_PROPERTY(title, NSString);
 RCT_EXPORT_VIEW_PROPERTY(artist, NSString);
 RCT_EXPORT_VIEW_PROPERTY(artworkUrl, NSString);
+RCT_EXPORT_VIEW_PROPERTY(activeForNowPlaying, BOOL);
 RCT_EXPORT_VIEW_PROPERTY(mixWithOthers, NSString);
 RCT_EXPORT_VIEW_PROPERTY(rate, float);
 RCT_EXPORT_VIEW_PROPERTY(seek, NSDictionary);
@@ -73,6 +74,8 @@ RCT_EXPORT_VIEW_PROPERTY(onPlaybackResume, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onPlaybackRateChange, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onVideoExternalPlaybackChange, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onGetLicense, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onSkipForward, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onSkipBack, RCTDirectEventBlock);
 RCT_REMAP_METHOD(save,
         options:(NSDictionary *)options
         reactTag:(nonnull NSNumber *)reactTag
