@@ -444,13 +444,12 @@ static int const RCTVideoUnset = -1;
 }
 
 
+
+//HACK - lock and then after 0.5 second unlock remote control input. This is believed to minimized some issues where playback breacks if user taps lock screen inputs rapidly in succession
 -(void)applyRemoteInputLockTimeout {
-    NSLog(@"~~ remoteControl input locked");
     _remoteControlInputLocked = YES;
     
-    //after 1.5 second unlock remote control input
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NSLog(@"~~ remoteControl input unlocked");
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         _remoteControlInputLocked = NO;
     });
 }
@@ -464,11 +463,8 @@ static int const RCTVideoUnset = -1;
     
     NSLog(@"RCTVideo toggleFromRemote rate:%f", _player.rate);
     
-    if (_player.rate == 0.0) {
-        [self setPaused:false];
-        return MPRemoteCommandHandlerStatusSuccess;
-    } else {
-        [self setPaused:true];
+    if(self.onRemoteTriggeredPlayPauseToggle) {
+        self.onRemoteTriggeredPlayPauseToggle((@{@"target": self.reactTag}));
         return MPRemoteCommandHandlerStatusSuccess;
     }
     
@@ -482,10 +478,10 @@ static int const RCTVideoUnset = -1;
     
     [self applyRemoteInputLockTimeout];
     
-    NSLog(@"RCTVideo playFromRemote rate:%f", _player.rate);
+    NSLog(@"RCTVideo playFromRemote");
     
-    if (_player.rate == 0.0) {
-        [self setPaused:false];
+    if(self.onRemoteTriggeredPlay) {
+        self.onRemoteTriggeredPlay((@{@"target": self.reactTag}));
         return MPRemoteCommandHandlerStatusSuccess;
     }
     return MPRemoteCommandHandlerStatusCommandFailed;
@@ -498,10 +494,10 @@ static int const RCTVideoUnset = -1;
     
     [self applyRemoteInputLockTimeout];
     
-    NSLog(@"RCTVideo pauseFromRemote rate:%f", _player.rate);
+    NSLog(@"RCTVideo pauseFromRemote");
     
-    if (_player.rate == 1.0) {
-        [self setPaused:true];
+    if(self.onRemoteTriggeredPause) {
+        self.onRemoteTriggeredPause((@{@"target": self.reactTag}));
         return MPRemoteCommandHandlerStatusSuccess;
     }
     
@@ -515,11 +511,10 @@ static int const RCTVideoUnset = -1;
     
     [self applyRemoteInputLockTimeout];
     
-    NSLog(@"RCTVideo stopFromRemote rate:%f", _player.rate);
+    NSLog(@"RCTVideo stopFromRemote rate");
     
-    if (_player.rate == 1.0) {
-        [self setPaused:true];
-
+    if(self.onRemoteTriggeredPause) {
+        self.onRemoteTriggeredPause((@{@"target": self.reactTag}));
         return MPRemoteCommandHandlerStatusSuccess;
     }
     
@@ -533,27 +528,24 @@ static int const RCTVideoUnset = -1;
     }
     
     [self applyRemoteInputLockTimeout];
-    [self setPaused:false];
+    
     NSLog(@"RCTVideo skipForwardFromRemote");
-    if(self.onSkipForward) {
-        NSLog(@"RCTVideo did skipForwardFromRemote");
-        self.onSkipForward((@{@"target": self.reactTag}));
+    if(self.onRemoteTriggeredSkipForward) {
+        self.onRemoteTriggeredSkipForward((@{@"target": self.reactTag}));
     }
     return MPRemoteCommandHandlerStatusSuccess;
 }
 
 -(MPRemoteCommandHandlerStatus)skipBackwardFromRemote:(MPRemoteCommandEvent *)event {
     if(_remoteControlInputLocked) {
-        NSLog(@"~~skipBackwardFromRemote locked");
         return MPRemoteCommandHandlerStatusCommandFailed;
     }
     
     [self applyRemoteInputLockTimeout];
-    [self setPaused:true];
+    
     NSLog(@"RCTVideo skipBackwardFromRemote");
-    if(self.onSkipBack) {
-        NSLog(@"RCTVideo did skipBackwardFromRemote");
-        self.onSkipBack((@{@"target": self.reactTag}));
+    if(self.onRemoteTriggeredSkipBack) {
+        self.onRemoteTriggeredSkipBack((@{@"target": self.reactTag}));
     }
     return MPRemoteCommandHandlerStatusSuccess;
 }
@@ -613,8 +605,6 @@ static int const RCTVideoUnset = -1;
     double playerRate = (double) _player.rate;
     double playerCurTime = (double) CMTimeGetSeconds(_playerItem.currentTime);
     double playerDuration = (double) CMTimeGetSeconds(_playerItem.duration);
-    
-    NSLog(@"~~setupNowPlaying, playerRate:%f floatRate:%f currentTime:%lld duration:%lld curTimeSeconds:%f playerDurationSeconds:%f", playerRate, _player.rate, _playerItem.currentTime.value, _playerItem.duration.value, playerCurTime, playerDuration);
     
     [songInfo setObject:[NSNumber numberWithDouble:playerCurTime] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
     [songInfo setObject:[NSNumber numberWithDouble:playerDuration] forKey:MPMediaItemPropertyPlaybackDuration];

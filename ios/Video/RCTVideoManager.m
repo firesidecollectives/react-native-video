@@ -74,8 +74,12 @@ RCT_EXPORT_VIEW_PROPERTY(onPlaybackResume, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onPlaybackRateChange, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onVideoExternalPlaybackChange, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onGetLicense, RCTDirectEventBlock);
-RCT_EXPORT_VIEW_PROPERTY(onSkipForward, RCTDirectEventBlock);
-RCT_EXPORT_VIEW_PROPERTY(onSkipBack, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onRemoteTriggeredSkipForward, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onRemoteTriggeredSkipBack, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onRemoteTriggeredPlay, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onRemoteTriggeredPause, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onRemoteTriggeredPlayPauseToggle, RCTDirectEventBlock);
+
 RCT_REMAP_METHOD(save,
         options:(NSDictionary *)options
         reactTag:(nonnull NSNumber *)reactTag

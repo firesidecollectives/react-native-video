@@ -43,8 +43,11 @@
 @property (nonatomic, copy) RCTDirectEventBlock onPictureInPictureStatusChanged;
 @property (nonatomic, copy) RCTDirectEventBlock onRestoreUserInterfaceForPictureInPictureStop;
 @property (nonatomic, copy) RCTDirectEventBlock onGetLicense;
-@property (nonatomic, copy) RCTDirectEventBlock onSkipForward;
-@property (nonatomic, copy) RCTDirectEventBlock onSkipBack;
+@property (nonatomic, copy) RCTDirectEventBlock onRemoteTriggeredSkipForward;
+@property (nonatomic, copy) RCTDirectEventBlock onRemoteTriggeredSkipBack;
+@property (nonatomic, copy) RCTDirectEventBlock onRemoteTriggeredPlay;
+@property (nonatomic, copy) RCTDirectEventBlock onRemoteTriggeredPause;
+@property (nonatomic, copy) RCTDirectEventBlock onRemoteTriggeredPlayPauseToggle;
 
 typedef NS_ENUM(NSInteger, RCTVideoError) {
     RCTVideoErrorFromJSPart,
