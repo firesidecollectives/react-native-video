@@ -444,23 +444,7 @@ static int const RCTVideoUnset = -1;
 }
 
 
-
-//HACK - lock and then after 0.5 second unlock remote control input. This is believed to minimized some issues where playback breacks if user taps lock screen inputs rapidly in succession
--(void)applyRemoteInputLockTimeout {
-    _remoteControlInputLocked = YES;
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        _remoteControlInputLocked = NO;
-    });
-}
-
 -(MPRemoteCommandHandlerStatus)toggleFromRemote:(MPRemoteCommandEvent *)event {
-    if(_remoteControlInputLocked) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    [self applyRemoteInputLockTimeout];
-    
     NSLog(@"RCTVideo toggleFromRemote rate:%f", _player.rate);
     
     if(self.onRemoteTriggeredPlayPauseToggle) {
@@ -472,12 +456,6 @@ static int const RCTVideoUnset = -1;
 }
 
 -(MPRemoteCommandHandlerStatus)playFromRemote:(MPRemoteCommandEvent *)event {
-    if(_remoteControlInputLocked) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    [self applyRemoteInputLockTimeout];
-    
     NSLog(@"RCTVideo playFromRemote");
     
     if(self.onRemoteTriggeredPlay) {
@@ -488,12 +466,6 @@ static int const RCTVideoUnset = -1;
 }
 
 -(MPRemoteCommandHandlerStatus)pauseFromRemote:(MPRemoteCommandEvent *)event {
-    if(_remoteControlInputLocked) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    [self applyRemoteInputLockTimeout];
-    
     NSLog(@"RCTVideo pauseFromRemote");
     
     if(self.onRemoteTriggeredPause) {
@@ -505,12 +477,6 @@ static int const RCTVideoUnset = -1;
 }
 
 -(MPRemoteCommandHandlerStatus)stopFromRemote:(MPRemoteCommandEvent *)event {
-    if(_remoteControlInputLocked) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    [self applyRemoteInputLockTimeout];
-    
     NSLog(@"RCTVideo stopFromRemote rate");
     
     if(self.onRemoteTriggeredPause) {
@@ -523,12 +489,6 @@ static int const RCTVideoUnset = -1;
 
 
 -(MPRemoteCommandHandlerStatus)skipForwardFromRemote:(MPRemoteCommandEvent *)event {
-    if(_remoteControlInputLocked) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    [self applyRemoteInputLockTimeout];
-    
     NSLog(@"RCTVideo skipForwardFromRemote");
     if(self.onRemoteTriggeredSkipForward) {
         self.onRemoteTriggeredSkipForward((@{@"target": self.reactTag}));
@@ -537,12 +497,6 @@ static int const RCTVideoUnset = -1;
 }
 
 -(MPRemoteCommandHandlerStatus)skipBackwardFromRemote:(MPRemoteCommandEvent *)event {
-    if(_remoteControlInputLocked) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    [self applyRemoteInputLockTimeout];
-    
     NSLog(@"RCTVideo skipBackwardFromRemote");
     if(self.onRemoteTriggeredSkipBack) {
         self.onRemoteTriggeredSkipBack((@{@"target": self.reactTag}));
