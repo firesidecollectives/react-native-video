@@ -214,7 +214,7 @@ export interface VideoProperties extends ViewProps {
     onRemoteTriggeredSkipForward?() : void;
     onRemoteTriggeredPause?() : void;
     onRemoteTriggeredPlay?() : void;
-    onRemoteTriggeredPlayPauseToggle(): void;
+    onRemoteTriggeredPlayPauseToggle?(): void;
     onAudioFocusChanged?(): void;
     onAudioBecomingNoisy?(): void;
     onPictureInPictureStatusChanged?(data: OnPictureInPictureStatusData): void;
