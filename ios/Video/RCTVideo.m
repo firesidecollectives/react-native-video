@@ -574,6 +574,27 @@ static int const RCTVideoUnset = -1;
     [self updateExistingNowPlayingDataArtwork:_artworkUrl];
 }
 
+- (void)updateRemoteCommandCenterForPlaybackState:(BOOL)isPlaying {
+    if(!_activeForNowPlaying) {
+      return;
+    }
+
+    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+
+    if (isPlaying) {
+        commandCenter.playCommand.enabled = NO;
+        commandCenter.pauseCommand.enabled = YES;
+    } else {
+        commandCenter.playCommand.enabled = YES;
+        commandCenter.pauseCommand.enabled = NO;
+    }
+
+    MPNowPlayingInfoCenter *nowPlayingInfo = [MPNowPlayingInfoCenter defaultCenter];
+    NSMutableDictionary *newNowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:nowPlayingInfo.nowPlayingInfo];
+    [newNowPlayingInfo setObject:[NSNumber numberWithDouble:(_paused ? 0.0 : 1.0)] forKey:MPNowPlayingInfoPropertyPlaybackRate];
+    nowPlayingInfo.nowPlayingInfo = newNowPlayingInfo;
+}
+
 - (void)setDrm:(NSDictionary *)drm {
   _drm = drm;
 }
@@ -1206,7 +1227,7 @@ static int const RCTVideoUnset = -1;
         [self setupRemoteTransportControl];
     }
   }
-  
+  [self updateRemoteCommandCenterForPlaybackState:!paused];
   _paused = paused;
 }
 
