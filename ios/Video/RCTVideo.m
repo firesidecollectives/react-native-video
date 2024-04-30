@@ -86,6 +86,7 @@ static int const RCTVideoUnset = -1;
   BOOL _activeForNowPlaying;
   NSString * _loadedArtworkUrl;
   BOOL _hasSetupRemoteTransportControl;
+  BOOL _hasSetupNowPlaying;
   BOOL _remoteControlInputLocked;
   NSString * _mixWithOthers;
   NSString * _resizeMode;
@@ -137,6 +138,7 @@ static int const RCTVideoUnset = -1;
     _activeForNowPlaying = NO;
     _loadedArtworkUrl = nil;
     _hasSetupRemoteTransportControl = NO;
+    _hasSetupNowPlaying = NO;
     _mixWithOthers = @"inherit"; // inherit, mix, duck
     _remoteControlInputLocked = NO;
 #if TARGET_OS_IOS
@@ -505,7 +507,7 @@ static int const RCTVideoUnset = -1;
 }
 
 -(void)setupRemoteTransportControl {
-    if(_hasSetupRemoteTransportControl) {
+    if(_hasSetupRemoteTransportControl || !_activeForNowPlaying) {
         return;
     }
     NSLog(@"RCTVideo setupRemoteTransportControl");
@@ -550,6 +552,11 @@ static int const RCTVideoUnset = -1;
 }
 
 - (void)setupNowPlaying {
+    
+    if(_hasSetupNowPlaying || !_activeForNowPlaying) {
+        return;
+    }
+
     NSLog(@"RCTVideo setupNowPlaying, _playInBackground:%d", _playInBackground);
     MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
     
@@ -572,27 +579,30 @@ static int const RCTVideoUnset = -1;
     
     //will load in image from url and assign image to default MPNowPlayingInfoCenter
     [self updateExistingNowPlayingDataArtwork:_artworkUrl];
+    _hasSetupNowPlaying = YES;
 }
 
-- (void)updateRemoteCommandCenterForPlaybackState:(BOOL)isPlaying {
-    if(!_activeForNowPlaying) {
-      return;
+- (void)updateNowPlayingInfo:(BOOL)isPlaying {
+    NSMutableDictionary *nowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:[MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo];
+    
+    double playerCurTime = (double) CMTimeGetSeconds(_playerItem.currentTime);
+    double playerDuration = (double) CMTimeGetSeconds(_playerItem.duration);
+    
+    nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(playerCurTime); // Ensure you fetch the correct current time
+    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? @1.0 : @0.0;
+    if (@available(iOS 10.0, *)) {
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackProgress] = @(playerDuration);
     }
+    [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nowPlayingInfo;
+}
 
+- (void)updatePlaybackState:(BOOL)isPlaying {
+    [self updateNowPlayingInfo:isPlaying];
+
+    //ensure the command center play/pause state is updated
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-
-    if (isPlaying) {
-        commandCenter.playCommand.enabled = NO;
-        commandCenter.pauseCommand.enabled = YES;
-    } else {
-        commandCenter.playCommand.enabled = YES;
-        commandCenter.pauseCommand.enabled = NO;
-    }
-
-    MPNowPlayingInfoCenter *nowPlayingInfo = [MPNowPlayingInfoCenter defaultCenter];
-    NSMutableDictionary *newNowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:nowPlayingInfo.nowPlayingInfo];
-    [newNowPlayingInfo setObject:[NSNumber numberWithDouble:(_paused ? 0.0 : 1.0)] forKey:MPNowPlayingInfoPropertyPlaybackRate];
-    nowPlayingInfo.nowPlayingInfo = newNowPlayingInfo;
+    commandCenter.playCommand.enabled = !isPlaying;
+    commandCenter.pauseCommand.enabled = isPlaying;
 }
 
 - (void)setDrm:(NSDictionary *)drm {
@@ -1222,12 +1232,13 @@ static int const RCTVideoUnset = -1;
       [_player setRate:_rate];
     }
       
-    if (_activeForNowPlaying) {
-        [self setupNowPlaying];
-        [self setupRemoteTransportControl];
-    }
+    //first time we start playing these will be run
+    [self setupNowPlaying];
+    [self setupRemoteTransportControl];
   }
-  [self updateRemoteCommandCenterForPlaybackState:!paused];
+  
+  //this will update lockscreen controls state evertime play/pause is toggled
+  [self updatePlaybackState:!paused];
   _paused = paused;
 }
 
