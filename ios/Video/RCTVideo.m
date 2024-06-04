@@ -696,10 +696,27 @@ static int const RCTVideoUnset = -1;
     DebugLog(@"Could not find video URL in source '%@'", source);
     return;
   }
-  
-  NSURL *url = isNetwork || isAsset
-    ? [NSURL URLWithString:uri]
-    : [[NSURL alloc] initFileURLWithPath:[[NSBundle mainBundle] pathForResource:uri ofType:type]];
+
+  NSURL *url;
+  if (isNetwork || isAsset) {
+    url = [NSURL URLWithString:uri];
+    if (!url) {
+      DebugLog(@"Invalid URL string: %@", uri);
+      return;
+    }
+  } else {
+    NSString *filePath = [[NSBundle mainBundle] pathForResource:uri ofType:type];
+    if (!filePath) {
+      DebugLog(@"File path for resource %@.%@ not found", uri, type);
+      return;
+    }
+    url = [NSURL fileURLWithPath:filePath];
+    if (!url) {
+      DebugLog(@"Failed to create file URL for path: %@", filePath);
+      return;
+    }
+  }
+
   NSMutableDictionary *assetOptions = [[NSMutableDictionary alloc] init];
   
   if (isNetwork) {
